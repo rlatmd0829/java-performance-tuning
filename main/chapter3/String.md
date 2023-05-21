@@ -2,7 +2,7 @@
 
 
 ### String 
-첫번째 차이점은 String은 불변하다는 특징을 가지고 있어서 수정을 하지못하고 새로운 String 인스턴스가 생성되고 전에 있던 String은 GC에 의해 사라지게 된다.
+String은 불변하다는 특징을 가지고 있어서 수정을 하지못하고 새로운 String 인스턴스가 생성되고 전에 있던 String은 GC에 의해 사라지게 된다.
 그래서 좋은 성능을 기대하기는 힘들다. (String 불변, StringBuffer, StringBuilder 가변)
 
 ### StringBuffer
