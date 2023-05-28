@@ -81,7 +81,7 @@ public class CodeManager {
   prviate CodeManager() {
   }
   
-  public static CodeMangergetInstance() {
+  public static CodeManger getInstance() {
     return cm;
   }
   
@@ -131,7 +131,7 @@ public class BadQueryManager {
 
 여기서 getSql() 메서드와 queryURL을 static으로 선언한 것이 잘못된 부분이다.
 
-웹환경이기 때문에 여러 화면에서 호출할 경우에 queryURL은 그떄 그때 바뀌게 된다. static으로 선언되어있기 때문에 클래스 변수이므로 모든 스레드에서 동일한 주소를 가리키게 되어 문제가 발생한다.
+웹환경이기 때문에 여러 화면에서 호출할 경우에 queryURL은 그때 그때 바뀌게 된다. static으로 선언되어있기 때문에 클래스 변수이므로 모든 스레드에서 동일한 주소를 가리키게 되어 문제가 발생한다.
 
 <br>
 
