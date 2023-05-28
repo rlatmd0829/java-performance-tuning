@@ -73,6 +73,9 @@ public class CodeManager {
   static {
     cDAO = CodeDAO();
     cm = new CodeManger();
+    if (!cm.getCodes()) {
+      // 에러처리
+    }
   }
   
   prviate CodeManager() {
