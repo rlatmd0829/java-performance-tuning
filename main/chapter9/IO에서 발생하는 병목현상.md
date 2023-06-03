@@ -4,6 +4,12 @@
 
 네트워크를 통해서 다른 서버로 데이터를 전송하거나, 다른 서버로부터 데이터를 전송 받는 것도 IO에 포함된다.
 
+콘솔에 출력하는 것도 스트림을 통해서 출력하는 것이다.
+
+```java
+System.out.println("hahaha");
+```
+
 ### 주요 클래스
 
 바이트 기반의 스트림을 처리하기 위한 클래스는 java.io.InputStream 하위 클래스들이다. (쓰는데 관련된 클래스들은 Input을 Output으로 바꾸어 사용하면 된다.)
@@ -71,3 +77,50 @@ NIO를 사용한다고 IO에서 발생하는 모든 병목 현상이 해결되�
 - 서버를 위해 복합적인 Non-blocking IO 제공
 
 ### DirectByteBuffer를 잘못 사용하여 문제가 발생한 
+
+NIO를 사용할 때 ByteBuffer를 사용하는 경우가 있다. ByteBuffer는 네트워크나 파일에 있는 데이터를 읽어 들일때 사용한다. ByteBuffer 객체를 생성하는 함수에는 wrap(), allocate(), allocateDirect()가 있다. 이 중에서 allocateDirect 함수는 데이터를 JVM에 올려서 사용하는 것이 아니라, OS 메모리에 할당된 메모리를 Native한 JNI로 처리하는 DirectByteBuffer 객체를 생성한다. 그런데 이 DirectByteBuffer 객체는 필요할 때 계속 생성해서는 안 된다.
+
+> JNI : 네이티브 프로그램(운영체제와 플랫폼에 종속적인 프로그램) 및 다른 언어로 작성된 라이브러리들을 호출하거나 호출되어지게 하는 프레임워크
+
+``` java
+psvm() {
+  DirectByteBuffer check = new DirectByteBufferCheck();
+  for (int loop = 1; loop < 1024000; loop++) {
+    check.getDirectByteBuffer();
+    if (loop % 100 == 0) {
+      System.out.println(loop);
+    }
+  }
+}
+
+public ByteBuffer getDirectByteBuffer() {
+  ByteBuffer buffer = ByteBuffer.allocateDirect(65536);
+  return buffer;
+}
+```
+
+getDirectByteBuffer 함수를 지속적으로 호출하는 간단한 코드다. getDirectByteBuffer 함수에서는 ByteBuffer 클래스의 allocateDirect 함수를 호출함으로써 DirectByteBuffer 객체를 생성한 후 리턴해준다.
+
+이 예제를 실행하고 나서 GC 상황을 모니터링하기 위해 jstat 명령을 사용하여 확인해보면 거의 5~10초에 한 번씩 Full GC가 발생하는 것을 볼 수 있다. 그런데 Old 영역의 메모리는 증가하지 않는다. 왜 이러한 문제가 발생했을까?
+
+그 이유는 DirectByteBuffer의 생성자 때문이다. 이 생성자는 java.nio 에 아무런 접근 제어자가 없이 선언된(package private) Bits라는 클래스의 reserveMemory() 함수를 호출한다. 이 reserveMemory 함수에서는 JVM에 할당되어 있는 메모리보다 더 많으 메모리를 요구할 경우 System.gc() 함수를 호출하도록 되어 있다.
+
+JVM에 있는 코드에 System.gc() 함수가 있기 때문에 해당 생성자가 무차별적으로 생성될 경우 GC가 자주 발생하고 성능에 영향을 줄 수 밖에 없다. 따라서, 이 DirectByteBuffer 객체를 생성할 때는 매우 신중하게 접근해야만 하며, 가능하다면 singleton 패턴을 사용하여 해당 JVM에는 하나의 객체만 생성하도록 하는 것을 권장한다.
+
+### lastModified() 메서드의 성능 저하
+
+JDK6까지 자바에서 파일 변경을 확인하기 위해 File 클래스에 있는 lastModified()라는 메서드를 사용했다.
+
+lastModifed() 프로세스 
+
+1. System.getSecurityManager()메서드를 호출하여 SecurityManaver객체를 얻어옴
+
+2. 만약 null이 아닐경우 SecurityManager의 checkRead()메서드 수행
+
+3. File 클래스 내부에 있는 FileSystem이라는 클래스의 객체에서 getLastModifiedTime()메서드를 수행하여 결과 리턴
+
+그냥 보기에는 3단계이지만, 각각의 호출되는 메서드에서 호출되는 메서드들이 매우 많으며 이는 OS마다 상이하다
+
+그러나 JDK7 부터는 watch관련 클래스로 인해 편하게 모니터링이 가능해져 해당 파일이 변경되었는지 주기적으로 확인할 필요가 없어졌다.
+
+
