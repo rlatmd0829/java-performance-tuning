@@ -87,7 +87,7 @@ NIO를 사용한다고 IO에서 발생하는 모든 병목 현상이 해결되�
 
 ## DirectByteBuffer를 잘못 사용하여 문제가 발생한 
 
-NIO를 사용할 때 ByteBuffer를 사용하는 경우가 있다. ByteBuffer는 네트워크나 파일에 있는 데이터를 읽어 들일때 사용한다. ByteBuffer 객체를 생성하는 함수에는 wrap(), allocate(), allocateDirect()가 있다. 이 중에서 allocateDirect 함수는 데이터를 JVM에 올려서 사용하는 것이 아니라, OS 메모리에 할당된 메모리를 Native한 JNI로 처리하는 DirectByteBuffer 객체를 생성한다. 그런데 이 DirectByteBuffer 객체는 필요할 때 계속 생성해서는 안 된다.
+NIO를 사용할 때 ByteBuffer를 사용하는 경우가 있다. ByteBuffer는 네트워크나 파일에 있는 데이터를 읽어 들일때 사용한다. ByteBuffer 객체를 생성하는 함수 중에서 allocateDirect 함수는 데이터를 JVM에 올려서 사용하는 것이 아니라, OS 메모리에 할당된 메모리를 Native한 JNI로 처리하는 DirectByteBuffer 객체를 생성한다. 그런데 이 DirectByteBuffer 객체는 필요할 때 계속 생성해서는 안 된다.
 
 > JNI : JVM Native Interface는 자바 애플리케이션과 네이티브 코드(C, C++, 어셈블리 등) 간의 상호 작용을 위한 인터페이스입니다.
 
@@ -110,7 +110,7 @@ public ByteBuffer getDirectByteBuffer() {
 
 getDirectByteBuffer 함수를 지속적으로 호출하는 간단한 코드다. getDirectByteBuffer 함수에서는 ByteBuffer 클래스의 allocateDirect 함수를 호출함으로써 DirectByteBuffer 객체를 생성한 후 리턴해준다.
 
-이 예제를 실행하고 나서 GC 상황을 모니터링하기 위해 jstat 명령을 사용하여 확인해보면 거의 5~10초에 한 번씩 Full GC가 발생하는 것을 볼 수 있다. 그런데 Old 영역의 메모리는 증가하지 않는다. 왜 이러한 문제가 발생했을까?
+이 예제를 실행하고 나서 GC 상황을 모니터링 해보면 거의 5~10초에 한 번씩 Full GC가 발생하는 것을 볼 수 있다.
 
 그 이유는 DirectByteBuffer의 생성자 때문이다. 이 생성자는 java.nio 에 reserveMemory() 함수를 호출한다. 이 reserveMemory 함수에서는 JVM에 할당되어 있는 메모리보다 더 많은 메모리를 요구할 경우 System.gc() 함수를 호출하도록 되어 있다.
 
